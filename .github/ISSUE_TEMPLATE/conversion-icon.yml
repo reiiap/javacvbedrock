@@ -1,24 +1,21 @@
-name: Conversion Request (With 3D → 2D Icon)
-description: Convert Java pack to Bedrock + auto generate 2D icons
-title: "[Conversion-Icon]: "
+name: Pack Conversion (With 3D → 2D Icon)
+description: Request automated Java → Bedrock conversion with auto icon rendering
+title: "[Pack-Icon]: "
 labels: ["conversion-icon"]
 
 body:
   - type: markdown
     attributes:
       value: |
-        ## Java → Bedrock Conversion (With Auto Icon)
-
-        This form will:
-        - Convert Java resource pack to Bedrock
-        - Automatically convert 3D item models into 2D Bedrock icons
+        Please include a directly downloadable link to your pack.
+        This version will automatically convert Java 3D item models into 2D Bedrock icons.
 
   - type: input
     id: java-pack-direct-download-url
     attributes:
       label: Java Pack Direct Download URL
-      description: Direct link to the Java resource pack (.zip)
-      placeholder: https://example.com/pack.zip
+      description: Direct link to the Java Edition resource pack.
+      placeholder: e.g. https://example.com/pack.zip
     validations:
       required: true
 
@@ -26,48 +23,90 @@ body:
     id: default-pack-direct-download-url
     attributes:
       label: Default Pack Direct Download URL
-      description: Optional
-      placeholder: Leave empty if not used
+      description: Optional Java pack for default textures.
+      placeholder: Optional
+    validations:
+      required: false
 
   - type: input
     id: bedrock-merge-pack-direct-download-url
     attributes:
       label: Bedrock Merge Pack Direct Download URL
-      description: Optional
-      placeholder: Leave empty if not used
-
-  - type: input
-    id: default-assets-version
-    attributes:
-      label: Default Assets Version
-      placeholder: 1.19.3
+      description: Optional Bedrock pack to merge.
+      placeholder: Optional
     validations:
       required: false
 
-  - type: input
+  - type: dropdown
+    id: default-assets-version
+    attributes:
+      label: Default Assets Version
+      options:
+        - 1.13.2
+        - 1.14.4
+        - 1.15.2
+        - 1.16.5
+        - 1.17.1
+        - 1.18.2
+        - 1.19.2
+        - 1.19.3
+        - 1.19.4
+        - '1.20'
+        - 1.20.1
+    validations:
+      required: false
+
+  - type: dropdown
     id: block-material
     attributes:
       label: Block Material
-      placeholder: alpha_test
+      options:
+        - opaque
+        - alpha_test
+        - blend
+        - double_sided
+    validations:
+      required: false
 
-  - type: input
+  - type: dropdown
     id: attachable-material
     attributes:
       label: Attachable Material
-      placeholder: entity_alphatest_one_sided
+      options:
+        - entity
+        - entity_alphatest
+        - entity_alphablend
+        - entity_alphatest_one_sided
+        - entity_emissive_alpha_one_sided
+    validations:
+      required: false
 
   - type: dropdown
     id: archive-scratch-files
     attributes:
-      label: Archive Scratch Files?
+      label: Archive Scratch Files
       options:
-        - false
-        - true
+        - 'true'
+        - 'false'
+    validations:
+      required: false
 
   - type: dropdown
     id: rename-model-files
     attributes:
-      label: Rename Model Files?
+      label: Rename Model Files
       options:
-        - false
-        - true
+        - 'true'
+        - 'false'
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: |
+        By submitting this issue, you agree to follow our Code of Conduct.
+      options:
+        - label: I agree to follow this project's Code of Conduct and confirm I have permission to use the linked assets.
+          required: true
