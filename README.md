@@ -162,4 +162,4 @@ https://github.com/reiiap
 
 ## 📜 Lisensi
 
-Distributed under the MIT License.
+GNU AFFERO GENERAL PUBLIC LICENSE.
