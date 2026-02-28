@@ -1,0 +1,73 @@
+name: Conversion Request (With 3D → 2D Icon)
+description: Convert Java pack to Bedrock + auto generate 2D icons
+title: "[Conversion-Icon]: "
+labels: ["conversion-icon"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Java → Bedrock Conversion (With Auto Icon)
+
+        This form will:
+        - Convert Java resource pack to Bedrock
+        - Automatically convert 3D item models into 2D Bedrock icons
+
+  - type: input
+    id: java-pack-direct-download-url
+    attributes:
+      label: Java Pack Direct Download URL
+      description: Direct link to the Java resource pack (.zip)
+      placeholder: https://example.com/pack.zip
+    validations:
+      required: true
+
+  - type: input
+    id: default-pack-direct-download-url
+    attributes:
+      label: Default Pack Direct Download URL
+      description: Optional
+      placeholder: Leave empty if not used
+
+  - type: input
+    id: bedrock-merge-pack-direct-download-url
+    attributes:
+      label: Bedrock Merge Pack Direct Download URL
+      description: Optional
+      placeholder: Leave empty if not used
+
+  - type: input
+    id: default-assets-version
+    attributes:
+      label: Default Assets Version
+      placeholder: 1.19.3
+    validations:
+      required: false
+
+  - type: input
+    id: block-material
+    attributes:
+      label: Block Material
+      placeholder: alpha_test
+
+  - type: input
+    id: attachable-material
+    attributes:
+      label: Attachable Material
+      placeholder: entity_alphatest_one_sided
+
+  - type: dropdown
+    id: archive-scratch-files
+    attributes:
+      label: Archive Scratch Files?
+      options:
+        - false
+        - true
+
+  - type: dropdown
+    id: rename-model-files
+    attributes:
+      label: Rename Model Files?
+      options:
+        - false
+        - true
