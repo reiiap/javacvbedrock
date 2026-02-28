@@ -74,11 +74,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-
       - name: Update APT
         run: |
           sudo apt-get clean
@@ -86,8 +81,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          sudo apt-get install -y zip unzip jq imagemagick ghostscript
-          npm install -g minecraft-item-renderer
+          sudo apt-get install -y zip unzip jq curl
 
       - name: Download Pack
         run: |
@@ -96,26 +90,30 @@ jobs:
           echo "Downloading pack..."
           curl -L --fail -o input_pack.zip "${{ needs.get-pack-info.outputs.pack_url }}"
 
-      - name: Convert 3D Models to 2D Icons
+      - name: Generate 2D Icons from 3D Models
         run: |
           cd staging
           unzip -o input_pack.zip -d java_pack
 
-          mkdir -p java_pack/generated_icons
-
           if [ -d "java_pack/assets/minecraft/models/item" ]; then
+            mkdir -p java_pack/assets/minecraft/textures/items
+
             for model in java_pack/assets/minecraft/models/item/*.json; do
-              filename=$(basename "$model" .json)
-              echo "Rendering $filename..."
-              minecraft-item-renderer \
-                --model "$model" \
-                --output "java_pack/generated_icons/${filename}.png" \
-                --size 64 || true
+              texture=$(jq -r '.textures.layer0 // empty' "$model")
+
+              if [ -n "$texture" ]; then
+                texture_path="java_pack/assets/minecraft/textures/${texture}.png"
+
+                if [ -f "$texture_path" ]; then
+                  filename=$(basename "$model" .json)
+                  cp "$texture_path" "java_pack/assets/minecraft/textures/items/${filename}.png"
+                  echo "✔ Generated icon for $filename"
+                else
+                  echo "⚠ Texture not found for $model"
+                fi
+              fi
             done
           fi
-
-          mkdir -p java_pack/assets/minecraft/textures/items
-          cp java_pack/generated_icons/*.png java_pack/assets/minecraft/textures/items/ 2>/dev/null || true
 
           cd java_pack
           zip -r ../input_pack.zip .
@@ -164,8 +162,8 @@ jobs:
           body: |
             ## 🚀 Conversion with Icon Completed!
 
-            ✔ Java 3D models converted into 2D Bedrock icons  
-            ✔ Pack converted successfully  
+            ✔ Java models converted to 2D Bedrock icons (texture fallback)
+            ✔ Pack converted successfully
 
             Download here:
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
