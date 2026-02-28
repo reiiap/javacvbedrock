@@ -1,128 +1,117 @@
-# Community Member and Contributor Code of Conduct
+# Kode Etik Komunitas ReiiAp
 
-## Our Pledge
+## Komitmen Kami
 
-We as members, contributors, and leaders pledge to make participation in our
-community a harassment-free experience for everyone, regardless of age, body
-size, visible or invisible disability, ethnicity, sex characteristics, gender
-identity and expression, level of experience, education, socio-economic status,
-nationality, personal appearance, race, religion, or sexual identity
-and orientation.
+Sebagai anggota, kontributor, dan pemimpin komunitas, kami berkomitmen untuk menjadikan partisipasi dalam komunitas ini sebagai pengalaman yang bebas dari pelecehan untuk semua orang, tanpa memandang usia, ukuran tubuh, disabilitas (terlihat maupun tidak terlihat), etnis, karakteristik seksual, identitas dan ekspresi gender, tingkat pengalaman, pendidikan, status sosial ekonomi, kewarganegaraan, penampilan pribadi, ras, agama, maupun orientasi seksual.
 
-We pledge to act and interact in ways that contribute to an open, welcoming,
-diverse, inclusive, and healthy community.
+Kami berkomitmen untuk bertindak dan berinteraksi dengan cara yang menciptakan komunitas yang terbuka, ramah, inklusif, beragam, dan sehat.
 
-## Our Standards
+---
 
-Examples of behavior that contributes to a positive environment for our
-community include:
+## Standar Perilaku
 
-* Demonstrating empathy and kindness toward other people
-* Being respectful of differing opinions, viewpoints, and experiences
-* Giving and gracefully accepting constructive feedback
-* Accepting responsibility and apologizing to those affected by our mistakes,
-  and learning from the experience
-* Focusing on what is best not just for us as individuals, but for the
-  overall community
+Contoh perilaku yang menciptakan lingkungan positif:
 
-Examples of unacceptable behavior include:
+- Menunjukkan empati dan kebaikan kepada orang lain  
+- Menghormati perbedaan pendapat, sudut pandang, dan pengalaman  
+- Memberikan serta menerima kritik yang membangun dengan sikap profesional  
+- Mengakui kesalahan, meminta maaf jika diperlukan, dan belajar dari kesalahan  
+- Mengutamakan kepentingan komunitas secara keseluruhan  
 
-* The use of sexualized language or imagery, and sexual attention or
-  advances of any kind
-* Trolling, insulting or derogatory comments, and personal or political attacks
-* Public or private harassment
-* Publishing others' private information, such as a physical or email
-  address, without their explicit permission
-* Other conduct which could reasonably be considered inappropriate in a
-  professional setting
+Contoh perilaku yang tidak dapat diterima:
 
-## Enforcement Responsibilities
+- Penggunaan bahasa atau konten yang bersifat seksual atau melecehkan  
+- Trolling, penghinaan, komentar merendahkan, atau serangan pribadi maupun politik  
+- Pelecehan secara publik maupun pribadi  
+- Membagikan informasi pribadi orang lain tanpa izin  
+- Perilaku lain yang tidak pantas dalam lingkungan profesional  
 
-Community leaders are responsible for clarifying and enforcing our standards of
-acceptable behavior and will take appropriate and fair corrective action in
-response to any behavior that they deem inappropriate, threatening, offensive,
-or harmful.
+---
 
-Community leaders have the right and responsibility to remove, edit, or reject
-comments, commits, code, wiki edits, issues, and other contributions that are
-not aligned to this Code of Conduct, and will communicate reasons for moderation
-decisions when appropriate.
+## Tanggung Jawab Penegakan
 
-## Scope
+Pemimpin komunitas bertanggung jawab untuk menjelaskan dan menegakkan standar perilaku ini.  
 
-This Code of Conduct applies within all community spaces, and also applies when
-an individual is officially representing the community in public spaces.
-Examples of representing our community include using an official e-mail address,
-posting via an official social media account, or acting as an appointed
-representative at an online or offline event.
+Mereka berhak mengambil tindakan yang adil dan sesuai terhadap perilaku yang dianggap tidak pantas, mengancam, ofensif, atau merugikan komunitas.
 
-## Enforcement
+Pemimpin komunitas berhak untuk:
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-conduct@kastle.tk.
-All complaints will be reviewed and investigated promptly and fairly.
+- Menghapus atau mengedit komentar
+- Menolak commit atau kontribusi
+- Menutup issue
+- Membatasi akses anggota
 
-All community leaders are obligated to respect the privacy and security of the
-reporter of any incident.
+Keputusan moderasi akan dijelaskan jika diperlukan.
 
-## Enforcement Guidelines
+---
 
-Community leaders will follow these Community Impact Guidelines in determining
-the consequences for any action they deem in violation of this Code of Conduct:
+## Ruang Lingkup
 
-### 1. Correction
+Kode Etik ini berlaku di seluruh ruang komunitas, termasuk:
 
-**Community Impact**: Use of inappropriate language or other behavior deemed
-unprofessional or unwelcome in the community.
+- Repository GitHub  
+- Issue & Pull Request  
+- Diskusi publik  
+- Media sosial resmi  
+- Event online maupun offline  
 
-**Consequence**: A private, written warning from community leaders, providing
-clarity around the nature of the violation and an explanation of why the
-behavior was inappropriate. A public apology may be requested.
+Kode Etik ini juga berlaku saat seseorang secara resmi mewakili komunitas ReiiAp di ruang publik.
 
-### 2. Warning
+---
 
-**Community Impact**: A violation through a single incident or series
-of actions.
+## Pelaporan & Penegakan
 
-**Consequence**: A warning with consequences for continued behavior. No
-interaction with the people involved, including unsolicited interaction with
-those enforcing the Code of Conduct, for a specified period of time. This
-includes avoiding interactions in community spaces as well as external channels
-like social media. Violating these terms may lead to a temporary or
-permanent ban.
+Jika terjadi pelanggaran, laporan dapat dikirimkan ke:
 
-### 3. Temporary Ban
+**Email:** support@reiiap.dev  
 
-**Community Impact**: A serious violation of community standards, including
-sustained inappropriate behavior.
+Semua laporan akan ditinjau secara adil dan rahasia.  
+Identitas pelapor akan dijaga privasinya.
 
-**Consequence**: A temporary ban from any sort of interaction or public
-communication with the community for a specified period of time. No public or
-private interaction with the people involved, including unsolicited interaction
-with those enforcing the Code of Conduct, is allowed during this period.
-Violating these terms may lead to a permanent ban.
+---
 
-### 4. Permanent Ban
+## Panduan Tindakan
 
-**Community Impact**: Demonstrating a pattern of violation of community
-standards, including sustained inappropriate behavior,  harassment of an
-individual, or aggression toward or disparagement of classes of individuals.
+### 1. Teguran
 
-**Consequence**: A permanent ban from any sort of public interaction within
-the community.
+**Dampak:** Perilaku tidak profesional atau tidak pantas.
 
-## Attribution
+**Tindakan:** Peringatan tertulis secara pribadi dan penjelasan pelanggaran.
 
-This Code of Conduct is adapted from the [Contributor Covenant][homepage],
-version 2.0, available at
-https://www.contributor-covenant.org/version/2/0/code_of_conduct.html.
+---
 
-Community Impact Guidelines were inspired by [Mozilla's code of conduct
-enforcement ladder](https://github.com/mozilla/diversity).
+### 2. Peringatan Resmi
 
-[homepage]: https://www.contributor-covenant.org
+**Dampak:** Pelanggaran tunggal atau berulang.
 
-For answers to common questions about this code of conduct, see the FAQ at
-https://www.contributor-covenant.org/faq. Translations are available at
-https://www.contributor-covenant.org/translations.
+**Tindakan:** Peringatan dengan konsekuensi jika perilaku berlanjut.  
+Pembatasan interaksi sementara dapat diberlakukan.
+
+---
+
+### 3. Larangan Sementara
+
+**Dampak:** Pelanggaran serius atau perilaku tidak pantas berkelanjutan.
+
+**Tindakan:** Larangan sementara dari interaksi komunitas.
+
+---
+
+### 4. Larangan Permanen
+
+**Dampak:** Pola pelanggaran berulang, pelecehan serius, atau agresi terhadap individu/kelompok.
+
+**Tindakan:** Larangan permanen dari komunitas.
+
+---
+
+## Atribusi
+
+Kode Etik ini diadaptasi dari Contributor Covenant versi 2.0.
+
+Dokumen asli tersedia di:
+https://www.contributor-covenant.org/version/2/0/code_of_conduct.html
+
+---
+
+Komunitas ReiiAp berkomitmen menjaga lingkungan yang profesional, aman, dan kolaboratif.
