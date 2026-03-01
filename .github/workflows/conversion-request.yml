@@ -1,5 +1,4 @@
-name: ReiiAp - Conversion Request
-
+name: Conversion Request
 on:
   issues:
     types:
@@ -7,43 +6,40 @@ on:
 
 jobs:
   get-pack-info:
-    name: 📥 Ambil Data Pack
     runs-on: ubuntu-latest
     if: github.event.label.name == 'conversion'
-    permissions:
+    permissions: 
       issues: read
     timeout-minutes: 2
     outputs:
-      pack_url: ${{ steps.organize.outputs.PACK_URL }}
-      default_pack_url: ${{ steps.organize.outputs.DEFAULT_PACK_URL }}
-      merge_pack_url: ${{ steps.organize.outputs.MERGE_PACK_URL }}
-      default_assets_version: ${{ steps.organize.outputs.DEFAULT_ASSETS_VERSION }}
-      block_material: ${{ steps.organize.outputs.BLOCK_MATERIAL }}
-      attachable_material: ${{ steps.organize.outputs.ATTACHABLE_MATERIAL }}
-      archive_scratch: ${{ steps.organize.outputs.ARCHIVE_SCRATCH }}
-      rename_model_files: ${{ steps.organize.outputs.RENAME_MODEL_FILES }}
+      pack_url: ${{ steps.organize-inputs.outputs.PACK_URL }}
+      default_pack_url: ${{ steps.organize-inputs.outputs.DEFAULT_PACK_URL }}
+      merge_pack_url: ${{ steps.organize-inputs.outputs.MERGE_PACK_URL }}
+      default_assets_version: ${{ steps.organize-inputs.outputs.DEFAULT_ASSETS_VERSION }}
+      block_material: ${{ steps.organize-inputs.outputs.BLOCK_MATERIAL }}
+      attachable_material: ${{ steps.organize-inputs.outputs.ATTACHABLE_MATERIAL }}
+      archive_scratch: ${{ steps.organize-inputs.outputs.ARCHIVE_SCRATCH }}
+      rename_model_files: ${{ steps.organize-inputs.outputs.RENAME_MODEL_FILES }}
     steps:
-      - name: Parse Issue Form
-        id: parse
+      - name: Issue Forms Body Parser
+        id: parse-issue
         uses: zentered/issue-forms-body-parser@v1.5.1
-
       - name: Organize Inputs
-        id: organize
+        id: organize-inputs
         run: |
-          echo ${{ toJSON(steps.parse.outputs.data) }} | jq '
+          echo ${{ toJSON(steps.parse-issue.outputs.data) }} | jq '
           def test_input($input; $default):
-            if ($input == "*No response*" or $input == "None") then $default else ($input | tostring | gsub("\\\\";"")) end;
+          if ($input == "*No response*" or $input == "None") then $default else ($input | tostring | gsub("\\\\";""))  end;
           {
-            "pack_url": .["java-pack-direct-download-url"].text,
-            "default_pack_url": test_input(.["default-pack-direct-download-url"].text; "null"),
-            "merge_pack_url": test_input(.["bedrock-merge-pack-direct-download-url"].text; "null"),
+            "pack_url": .["java-pack-direct-download-url"].text[1:-1],
+            "default_pack_url": test_input(.["default-pack-direct-download-url"].text; " null ")[1:-1],
+            "merge_pack_url": test_input(.["bedrock-merge-pack-direct-download-url"].text; " null ")[1:-1],
             "default_assets_version": test_input(.["default-assets-version"].text; "1.19.3"),
             "block_material": test_input(.["block-material"].text; "alpha_test"),
             "attachable_material": test_input(.["attachable-material"].text; "entity_alphatest_one_sided"),
             "archive_scratch": test_input(.["archive-scratch-files"].text; "false"),
             "rename_model_files": test_input(.["rename-model-files"].text; "false")
           }' > inputs.json
-
           echo "PACK_URL=$(jq -r '.pack_url' inputs.json)" >> $GITHUB_OUTPUT
           echo "DEFAULT_PACK_URL=$(jq -r '.default_pack_url' inputs.json)" >> $GITHUB_OUTPUT
           echo "MERGE_PACK_URL=$(jq -r '.merge_pack_url' inputs.json)" >> $GITHUB_OUTPUT
@@ -54,31 +50,40 @@ jobs:
           echo "RENAME_MODEL_FILES=$(jq -r '.rename_model_files' inputs.json)" >> $GITHUB_OUTPUT
 
   convert-pack:
-    name: 🔄 Convert Resource Pack
     runs-on: ubuntu-latest
     needs: get-pack-info
-    permissions:
+    permissions: 
       contents: read
     timeout-minutes: 90
+    outputs:
+      run_id: ${{ steps.get-pack-info.outputs.pack_url }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: Setup NodeJS
+      - name: Enable default asset cache
+        id: cache-default-assets
+        uses: actions/cache@v3
+        with:
+          path: /home/runner/work/java2bedrock.sh/java2bedrock.sh/staging/default_assets.zip
+          key: ${{ runner.os }}-${{ needs.get-pack-info.outputs.default_assets_version }}
+      - name: Install NodeJS
         uses: actions/setup-node@v3
         with:
-          node-version: 18
-
-      - name: Install Dependencies
+          node-version: 17
+      - name: Fix APT sources and update
         run: |
+          sudo sed -i 's|mirror+file:/etc/apt/apt-mirrors.txt|http://archive.ubuntu.com/ubuntu|' /etc/apt/sources.list
+          sudo apt-get clean
           sudo apt-get update
-          sudo apt-get install -y moreutils zip imagemagick ghostscript
-          npm install -g spritesheet-js
-
-      - name: Run Converter
-        env:
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y --fix-missing moreutils zip imagemagick ghostscript
+          yarn global add spritesheet-js
+      - name: Convert Pack
+        id: convert-pack
+        continue-on-error: false
+        env: 
           PACK_URL: ${{ needs.get-pack-info.outputs.pack_url }}
           DEFAULT_PACK_URL: ${{ needs.get-pack-info.outputs.default_pack_url }}
           MERGE_PACK_URL: ${{ needs.get-pack-info.outputs.merge_pack_url }}
@@ -92,95 +97,76 @@ jobs:
           cp converter.sh staging/
           cd staging
           chmod +x converter.sh
-
-          echo "⬇️ Downloading main pack..."
-          if [[ -z "${PACK_URL}" || "${PACK_URL}" == "null" ]]; then
-            echo "❌ PACK_URL tidak valid!"
-            exit 1
-          fi
-          curl -L -o input_pack.zip "${PACK_URL}"
-
-          MERGE_PACK_FILE="null"
-          if [[ "${MERGE_PACK_URL}" != "null" && -n "${MERGE_PACK_URL}" ]]; then
-            echo "⬇️ Downloading merge pack..."
-            curl -L -o merge_pack.zip "${MERGE_PACK_URL}"
+          COLUMNS=$COLUMNS-1 curl --no-styled-output -#L -o input_pack.zip "${PACK_URL}"
+          MERGE_PACK_FILE="${MERGE_PACK_URL}"
+          if [ "${MERGE_PACK_URL}" != "null" ]; then
+            COLUMNS=$COLUMNS-1 curl --no-styled-output -#L -o merge_pack.zip "${MERGE_PACK_URL}"
             MERGE_PACK_FILE="merge_pack.zip"
           fi
-
-          echo "⚙️ Running converter..."
-          ./converter.sh input_pack.zip \
-            -w "false" \
-            -m ${MERGE_PACK_FILE} \
-            -a ${ATTACHABLE_MATERIAL} \
-            -b ${BLOCK_MATERIAL} \
-            -f ${DEFAULT_PACK_URL} \
-            -v ${DEFAULT_ASSETS_VERSION} \
-            -r ${RENAME_MODEL_FILES} \
-            -s ${ARCHIVE_SCRATCH} \
-            -u "true"
-
-      - name: Upload Artifact
+          ./converter.sh input_pack.zip -w "false" -m ${MERGE_PACK_FILE} -a ${ATTACHABLE_MATERIAL} -b ${BLOCK_MATERIAL} -f ${DEFAULT_PACK_URL} -v ${DEFAULT_ASSETS_VERSION} -r ${RENAME_MODEL_FILES} -s ${ARCHIVE_SCRATCH} -u "true"
+      - name: Upload converted pack
         uses: actions/upload-artifact@v4
         with:
-          name: reiiap-converted-pack
+          name: Pack Files
           path: |
             staging/target/packaged/geyser_resources.mcpack
             staging/target/packaged/geyser_addon.mcaddon
             staging/target/geyser_mappings.json
+            staging/target/scratch_files.zip
             staging/config.json
 
   post-result:
-    name: 📢 Post Result
     runs-on: ubuntu-latest
     needs: convert-pack
-    permissions:
+    timeout-minutes: 2
+    permissions: 
       issues: write
     steps:
-      - name: Comment Success
+      - name: Post Result
+        id: post-result
         uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
-            ## 🚀 Konversi Berhasil!
+            ## :sparkles: The run has finished! :sparkles:
+            - Download the pack files from the [action run][1] page. :arrow_double_down:
+            - Upload the resource pack `geyser_resources.mcpack` to the `packs` folder of your Geyser folder. :file_folder:
+            - Upload the mappings file `geyser_mappings.json` to the `custom_mappings` folder of your Geyser folder. :page_with_curl:
 
-            File hasil convert bisa diunduh melalui halaman **GitHub Actions** berikut:
+            If you notice issues with the converted files, please refer to the action log for errors and open a bug report if you believe there is an issue with the converter. This issue will be closed automatically.
 
-            🔗 https://github.com/reiiap/javacvbedrock/actions/runs/${{ github.run_id }}
-
-            ### 📂 Cara Menggunakan:
-            - Upload `geyser_resources.mcpack` ke folder `packs` milik Geyser.
-            - Upload `geyser_mappings.json` ke folder `custom_mappings`.
-
-            Jika ada kendala, silakan cek log pada halaman Actions.
-
+            [1]: https://github.com/Kas-tle/java2bedrock.sh/actions/runs/${{ github.run_id}}
+          reactions: 'rocket'
       - name: Close Issue
         uses: peter-evans/close-issue@v2
         with:
           issue-number: ${{ github.event.issue.number }}
 
   conversion-failed:
-    name: ❌ Conversion Failed
     runs-on: ubuntu-latest
-    needs: [get-pack-info, convert-pack]
-    if: failure()
-    permissions:
+    needs: [get-pack-info, convert-pack, post-result]
+    if: always() && (needs.get-pack-info.result == 'failure' || needs.convert-pack.result == 'failure' || needs.convert-pack.result == 'post-result')
+    timeout-minutes: 2
+    permissions: 
       issues: write
     steps:
-      - name: Comment Failure
+      - name: Post Result
+        id: post-result
         uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
-            ## ❌ Konversi Gagal
+            ## :stop_sign: The run has failed :stop_sign:
+            - Check the [action run][1] page for errors. :clipboard:
+            - Status by job:
+              - Get Pack Info: *${{ needs.get-pack-info.result }}*
+              - Convert Pack: *${{ needs.convert-pack.result }}*
+              - Post Result: *${{ needs.post-result.result }}*
 
-            Silakan cek detail error di halaman:
+            If you believe this is an issue with the converter, please open a bug report. This issue will be closed automatically.
 
-            🔗 https://github.com/reiiap/javacvbedrock/actions/runs/${{ github.run_id }}
-
-            Pastikan link resource pack valid dan dapat diakses publik.
-
-            Jika merasa ini bug dari sistem, silakan buat laporan baru.
-
+            [1]: https://github.com/Kas-tle/java2bedrock.sh/actions/runs/${{ github.run_id}}
+          reactions: 'x'
       - name: Close Issue
         uses: peter-evans/close-issue@v2
         with:
