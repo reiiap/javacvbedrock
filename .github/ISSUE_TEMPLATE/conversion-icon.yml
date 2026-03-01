@@ -1,16 +1,9 @@
+---
 name: Pack Conversion (With 3D → 2D Icon)
-on:
-  issues:
-    types:
-      - opened
-      - labeled
-jobs:
-  get-pack-info:
-    runs-on: ubuntu-latest
-    if: contains(github.event.issue.labels.*.name, 'conversion-icon')
 description: Request automated Java → Bedrock conversion with auto icon rendering
 title: "[Pack-Icon]: "
-labels: ["conversion-icon"]
+labels:
+  - conversion-icon
 
 body:
   - type: markdown
@@ -24,7 +17,7 @@ body:
     attributes:
       label: Java Pack Direct Download URL
       description: Direct link to the Java Edition resource pack.
-      placeholder: e.g. https://example.com/pack.zip
+      placeholder: https://example.com/pack.zip
     validations:
       required: true
 
@@ -51,17 +44,17 @@ body:
     attributes:
       label: Default Assets Version
       options:
-        - 1.13.2
-        - 1.14.4
-        - 1.15.2
-        - 1.16.5
-        - 1.17.1
-        - 1.18.2
-        - 1.19.2
-        - 1.19.3
-        - 1.19.4
-        - '1.20'
-        - 1.20.1
+        - "1.13.2"
+        - "1.14.4"
+        - "1.15.2"
+        - "1.16.5"
+        - "1.17.1"
+        - "1.18.2"
+        - "1.19.2"
+        - "1.19.3"
+        - "1.19.4"
+        - "1.20"
+        - "1.20.1"
     validations:
       required: false
 
@@ -95,8 +88,8 @@ body:
     attributes:
       label: Archive Scratch Files
       options:
-        - 'true'
-        - 'false'
+        - "true"
+        - "false"
     validations:
       required: false
 
@@ -105,8 +98,8 @@ body:
     attributes:
       label: Rename Model Files
       options:
-        - 'true'
-        - 'false'
+        - "true"
+        - "false"
     validations:
       required: false
 
