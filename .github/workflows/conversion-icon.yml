@@ -12,7 +12,7 @@ jobs:
     if: contains(github.event.issue.labels.*.name, 'conversion-icon')
     permissions:
       issues: read
-    timeout-minutes: 2
+    timeout-minutes: 5
     outputs:
       pack_url: ${{ steps.organize-inputs.outputs.PACK_URL }}
       default_pack_url: ${{ steps.organize-inputs.outputs.DEFAULT_PACK_URL }}
@@ -31,7 +31,9 @@ jobs:
       - name: Organize Inputs
         id: organize-inputs
         run: |
-          printf '%s' '${{ toJSON(steps.parse-issue.outputs.data) }}' | jq '
+          echo '${{ steps.parse-issue.outputs.data }}' > raw.json
+
+          jq '
           def test_input($input; $default):
             if ($input == "*No response*" or $input == "None")
             then $default
@@ -45,15 +47,15 @@ jobs:
             | gsub("&dl=0";"&dl=1");
 
           {
-            "pack_url": clean_url(.["java-pack-direct-download-url"].text),
-            "default_pack_url": clean_url(test_input(.["default-pack-direct-download-url"].text; "null")),
-            "merge_pack_url": clean_url(test_input(.["bedrock-merge-pack-direct-download-url"].text; "null")),
-            "default_assets_version": test_input(.["default-assets-version"].text; "1.19.3"),
-            "block_material": test_input(.["block-material"].text; "alpha_test"),
-            "attachable_material": test_input(.["attachable-material"].text; "entity_alphatest_one_sided"),
-            "archive_scratch": test_input(.["archive-scratch-files"].text; "false"),
-            "rename_model_files": test_input(.["rename-model-files"].text; "false")
-          }' > inputs.json
+            pack_url: clean_url(.["java-pack-direct-download-url"].text),
+            default_pack_url: clean_url(test_input(.["default-pack-direct-download-url"].text; "null")),
+            merge_pack_url: clean_url(test_input(.["bedrock-merge-pack-direct-download-url"].text; "null")),
+            default_assets_version: test_input(.["default-assets-version"].text; "1.19.3"),
+            block_material: test_input(.["block-material"].text; "alpha_test"),
+            attachable_material: test_input(.["attachable-material"].text; "entity_alphatest_one_sided"),
+            archive_scratch: test_input(.["archive-scratch-files"].text; "false"),
+            rename_model_files: test_input(.["rename-model-files"].text; "false")
+          }' raw.json > inputs.json
 
           echo "PACK_URL=$(jq -r '.pack_url' inputs.json)" >> $GITHUB_OUTPUT
           echo "DEFAULT_PACK_URL=$(jq -r '.default_pack_url' inputs.json)" >> $GITHUB_OUTPUT
@@ -111,9 +113,9 @@ jobs:
                 if [ -f "$texture_path" ]; then
                   filename=$(basename "$model" .json)
                   cp "$texture_path" "java_pack/assets/minecraft/textures/items/${filename}.png"
-                  echo "✔ Generated icon for $filename"
+                  echo "Generated icon for $filename"
                 else
-                  echo "⚠ Texture not found for $model"
+                  echo "Texture not found for $model"
                 fi
               fi
             done
@@ -167,10 +169,10 @@ jobs:
           body: |
             ## 🚀 Conversion with Icon Completed!
 
-            ✔ Java models converted to 2D Bedrock icons (texture fallback)
+            ✔ Java models converted to 2D Bedrock icons
             ✔ Pack converted successfully
 
-            Download here:
+            Download:
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Close Issue
@@ -192,7 +194,7 @@ jobs:
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
-            ❌ Conversion with icon failed.
+            ❌ Conversion failed.
 
             Check logs:
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
