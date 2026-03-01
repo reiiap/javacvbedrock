@@ -3,12 +3,13 @@ name: Conversion Request with icon
 on:
   issues:
     types:
+      - opened
       - labeled
 
 jobs:
   get-pack-info:
     runs-on: ubuntu-latest
-    if: github.event.label.name == 'conversion-icon'
+    if: contains(github.event.issue.labels.*.name, 'conversion-icon')
     permissions:
       issues: read
     timeout-minutes: 2
@@ -30,7 +31,7 @@ jobs:
       - name: Organize Inputs
         id: organize-inputs
         run: |
-          printf '%s' "${{ toJSON(steps.parse-issue.outputs.data) }}" | jq '
+          printf '%s' '${{ toJSON(steps.parse-issue.outputs.data) }}' | jq '
           def test_input($input; $default):
             if ($input == "*No response*" or $input == "None")
             then $default
@@ -74,14 +75,17 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Update APT
-        run: |
-          sudo apt-get clean
-          sudo apt-get update
-
       - name: Install Dependencies
         run: |
+          sudo apt-get update
           sudo apt-get install -y zip unzip jq curl
+
+      - name: Validate Pack URL
+        run: |
+          if [ -z "${{ needs.get-pack-info.outputs.pack_url }}" ]; then
+            echo "PACK_URL is empty!"
+            exit 1
+          fi
 
       - name: Download Pack
         run: |
@@ -151,6 +155,7 @@ jobs:
   post-result:
     runs-on: ubuntu-latest
     needs: convert-pack
+    if: success()
     permissions:
       issues: write
 
