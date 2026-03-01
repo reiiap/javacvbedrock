@@ -1,4 +1,13 @@
 name: Pack Conversion (With 3D → 2D Icon)
+on:
+  issues:
+    types:
+      - opened
+      - labeled
+jobs:
+  get-pack-info:
+    runs-on: ubuntu-latest
+    if: contains(github.event.issue.labels.*.name, 'conversion-icon')
 description: Request automated Java → Bedrock conversion with auto icon rendering
 title: "[Pack-Icon]: "
 labels: ["conversion-icon"]
