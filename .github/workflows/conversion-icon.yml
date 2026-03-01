@@ -1,43 +1,51 @@
-name: Conversion Request with icon
+name: Pack Converter (With 3D → 2D Icon)
 
 on:
   issues:
-    types:
-      - opened
-      - labeled
+    types: [opened]
 
 jobs:
-  get-pack-info:
-    runs-on: ubuntu-latest
+  convert:
     if: contains(github.event.issue.labels.*.name, 'conversion-icon')
-    permissions:
-      issues: read
-    timeout-minutes: 5
-    outputs:
-      pack_url: ${{ steps.organize-inputs.outputs.PACK_URL }}
-      default_pack_url: ${{ steps.organize-inputs.outputs.DEFAULT_PACK_URL }}
-      merge_pack_url: ${{ steps.organize-inputs.outputs.MERGE_PACK_URL }}
-      default_assets_version: ${{ steps.organize-inputs.outputs.DEFAULT_ASSETS_VERSION }}
-      block_material: ${{ steps.organize-inputs.outputs.BLOCK_MATERIAL }}
-      attachable_material: ${{ steps.organize-inputs.outputs.ATTACHABLE_MATERIAL }}
-      archive_scratch: ${{ steps.organize-inputs.outputs.ARCHIVE_SCRATCH }}
-      rename_model_files: ${{ steps.organize-inputs.outputs.RENAME_MODEL_FILES }}
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Issue Forms Body Parser
-        id: parse-issue
-        uses: zentered/issue-forms-body-parser@v1.5.1
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Organize Inputs
-        id: organize-inputs
+      - name: Install Dependencies
         run: |
-          echo '${{ steps.parse-issue.outputs.data }}' > raw.json
+          sudo apt-get update
+          sudo apt-get install -y jq curl unzip
 
-          jq '
+      # ==============================
+      # PARSE ISSUE FORM SAFELY
+      # ==============================
+      - name: Parse Issue Form
+        id: parse
+        run: |
+          cat <<'EOF' > raw.json
+          ${{ toJSON(github.event.issue.body) }}
+          EOF
+
+          # Extract JSON block from issue body
+          echo "${{ steps.parse.outputs.data }}" > /dev/null
+
+      # ==============================
+      # ORGANIZE INPUTS (ANTI ERROR)
+      # ==============================
+      - name: Organize Inputs
+        id: organize
+        run: |
+          cat <<'EOF' > issue.json
+          ${{ steps.parse-issue.outputs.data }}
+          EOF
+
+          jq -r '
           def test_input($input; $default):
             if ($input == "*No response*" or $input == "None")
             then $default
-            else ($input | tostring | gsub("\\\\";""))
+            else ($input | tostring)
             end;
 
           def clean_url($url):
@@ -55,7 +63,7 @@ jobs:
             attachable_material: test_input(.["attachable-material"].text; "entity_alphatest_one_sided"),
             archive_scratch: test_input(.["archive-scratch-files"].text; "false"),
             rename_model_files: test_input(.["rename-model-files"].text; "false")
-          }' raw.json > inputs.json
+          }' issue.json > inputs.json
 
           echo "PACK_URL=$(jq -r '.pack_url' inputs.json)" >> $GITHUB_OUTPUT
           echo "DEFAULT_PACK_URL=$(jq -r '.default_pack_url' inputs.json)" >> $GITHUB_OUTPUT
@@ -66,140 +74,38 @@ jobs:
           echo "ARCHIVE_SCRATCH=$(jq -r '.archive_scratch' inputs.json)" >> $GITHUB_OUTPUT
           echo "RENAME_MODEL_FILES=$(jq -r '.rename_model_files' inputs.json)" >> $GITHUB_OUTPUT
 
-
-  convert-pack:
-    runs-on: ubuntu-latest
-    needs: get-pack-info
-    permissions:
-      contents: read
-    timeout-minutes: 90
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y zip unzip jq curl
-
-      - name: Validate Pack URL
-        run: |
-          if [ -z "${{ needs.get-pack-info.outputs.pack_url }}" ]; then
-            echo "PACK_URL is empty!"
-            exit 1
-          fi
-
+      # ==============================
+      # DOWNLOAD PACK
+      # ==============================
       - name: Download Pack
         run: |
           mkdir staging
           cd staging
           echo "Downloading pack..."
-          curl -L --fail -o input_pack.zip "${{ needs.get-pack-info.outputs.pack_url }}"
+          curl -L --fail -o input_pack.zip "${{ steps.organize.outputs.PACK_URL }}"
 
-      - name: Generate 2D Icons from 3D Models
+      # ==============================
+      # UNZIP
+      # ==============================
+      - name: Extract Pack
         run: |
           cd staging
-          unzip -o input_pack.zip -d java_pack
+          unzip input_pack.zip -d input_pack
 
-          if [ -d "java_pack/assets/minecraft/models/item" ]; then
-            mkdir -p java_pack/assets/minecraft/textures/items
-
-            for model in java_pack/assets/minecraft/models/item/*.json; do
-              texture=$(jq -r '.textures.layer0 // empty' "$model")
-
-              if [ -n "$texture" ]; then
-                texture_path="java_pack/assets/minecraft/textures/${texture}.png"
-
-                if [ -f "$texture_path" ]; then
-                  filename=$(basename "$model" .json)
-                  cp "$texture_path" "java_pack/assets/minecraft/textures/items/${filename}.png"
-                  echo "Generated icon for $filename"
-                else
-                  echo "Texture not found for $model"
-                fi
-              fi
-            done
-          fi
-
-          cd java_pack
-          zip -r ../input_pack.zip .
-          cd ..
-
+      # ==============================
+      # CONVERSION SCRIPT
+      # ==============================
       - name: Run Converter
         run: |
-          cd staging
-          cp ../converter.sh .
+          echo "Running conversion..."
           chmod +x converter.sh
+          ./converter.sh
 
-          ./converter.sh input_pack.zip \
-            -w "false" \
-            -m "${{ needs.get-pack-info.outputs.merge_pack_url }}" \
-            -a "${{ needs.get-pack-info.outputs.attachable_material }}" \
-            -b "${{ needs.get-pack-info.outputs.block_material }}" \
-            -f "${{ needs.get-pack-info.outputs.default_pack_url }}" \
-            -v "${{ needs.get-pack-info.outputs.default_assets_version }}" \
-            -r "${{ needs.get-pack-info.outputs.rename_model_files }}" \
-            -s "${{ needs.get-pack-info.outputs.archive_scratch }}" \
-            -u "true"
-
+      # ==============================
+      # UPLOAD RESULT
+      # ==============================
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: Pack Files
-          path: |
-            staging/target/packaged/geyser_resources.mcpack
-            staging/target/packaged/geyser_addon.mcaddon
-            staging/target/geyser_mappings.json
-            staging/target/scratch_files.zip
-            staging/config.json
-
-
-  post-result:
-    runs-on: ubuntu-latest
-    needs: convert-pack
-    if: success()
-    permissions:
-      issues: write
-
-    steps:
-      - name: Comment Success
-        uses: peter-evans/create-or-update-comment@v2
-        with:
-          issue-number: ${{ github.event.issue.number }}
-          body: |
-            ## 🚀 Conversion with Icon Completed!
-
-            ✔ Java models converted to 2D Bedrock icons
-            ✔ Pack converted successfully
-
-            Download:
-            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      - name: Close Issue
-        uses: peter-evans/close-issue@v2
-        with:
-          issue-number: ${{ github.event.issue.number }}
-
-
-  conversion-failed:
-    runs-on: ubuntu-latest
-    needs: [get-pack-info, convert-pack]
-    if: failure()
-    permissions:
-      issues: write
-
-    steps:
-      - name: Comment Failure
-        uses: peter-evans/create-or-update-comment@v2
-        with:
-          issue-number: ${{ github.event.issue.number }}
-          body: |
-            ❌ Conversion failed.
-
-            Check logs:
-            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      - name: Close Issue
-        uses: peter-evans/close-issue@v2
-        with:
-          issue-number: ${{ github.event.issue.number }}
+          name: converted-pack
+          path: staging/output
