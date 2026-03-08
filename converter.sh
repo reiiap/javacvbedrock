@@ -484,15 +484,29 @@ mkdir -p target/rp/textures
 
 > scratch_files/icons2d.csv
 
-find assets -type f -path "*/models/*/*.json" | while read model
+# scan override models
+jq -r '
+.. | objects | select(has("overrides")) |
+.overrides[].model
+' assets/*/models/item/*.json 2>/dev/null \
+| sed 's/:/\//g' \
+| while read model
+do
+  if [[ -f "assets/${model}.json" ]]
+  then
+    echo "assets/${model}.json"
+  fi
+done >> scratch_files/extra_models.txt
+
+(find assets -type f -name "*.json" | grep "/models/"; cat scratch_files/extra_models.txt 2>/dev/null) | while read model
 do
   item=$(basename "$model" .json)
 
   texture=$(jq -r '.textures.layer0 // .textures.all // .textures.particle // empty' "$model")
 
-  elements=$(jq '.elements // empty' "$model")
+  elements=$(jq '.elements | length // 0' "$model")
 
-  if [[ -n "$elements" ]]; then
+  if [[ "$elements" -gt 0 ]]; then
     continue
   fi
 
@@ -502,20 +516,35 @@ do
 
   if [[ -n "$texture" ]]
   then
-    texture=${texture#minecraft:}
+    texture=${texture#*:}
+    texture=${texture#item/}
+    texture=${texture#items/}
 
-    src=$(find assets -type f -path "*/textures/*/${texture##*/}.png" | head -n 1)
+    src=$(find assets -type f -iname "${texture##*/}.png" | head -n 1)
 
     if [[ -f "$src" ]]
     then
-      cp "$src" "target/rp/textures/items/${item}.png"
 
+    if [[ ! -f target/rp/textures/items/${item}.png ]]; then
+      cp "$src" "target/rp/textures/items/${item}.png"
+    fi
       echo "${item},textures/items/${item}" >> scratch_files/icons2d.csv
 
       status_message completion "Generated icon: ${item}"
     fi
   fi
 done
+
+jq -cR 'split(",")' scratch_files/icons2d.csv \
+| jq -s 'map({(.[0]): {"textures": (.[1])}}) | add' \
+> scratch_files/icons2d.json
+
+jq -s '
+.[0] as $icons
+| .[1]
+| .texture_data += $icons
+' scratch_files/icons2d.json target/rp/textures/item_texture.json \
+| sponge target/rp/textures/item_texture.json
 
 if [[ -f scratch_files/icons2d.csv ]]
 then
