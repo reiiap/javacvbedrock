@@ -122,6 +122,7 @@ fi
 dependency_check "jq" "https://stedolan.github.io/jq/download/" "jq --version" "1.6\|1.7"
 dependency_check "sponge" "https://joeyh.name/code/moreutils/" "-v sponge" ""
 # dependency_check "imagemagick" "https://imagemagick.org/script/download.php" "convert --version" ""
+dependency_check "imagemagick" "https://imagemagick.org/script/download.php" "convert --version" ""
 dependency_check "spritesheet-js" "https://www.npmjs.com/package/spritesheet-js" "-v spritesheet-js" ""
 status_message completion "All dependencies have been satisfied\n"
 
@@ -475,6 +476,59 @@ convert ${i} -set option:distort:viewport "%[fx:min(w,h)]x%[fx:min(w,h)]" -disto
 done
 
 status_message completion "Initial pack setup complete\n"
+
+status_message process "Generating Bedrock 2D icons from Java models\n"
+
+mkdir -p target/rp/textures/items
+mkdir -p target/rp/textures
+
+> scratch_files/icons2d.csv
+
+find assets -type f -path "*/models/*/*.json" | while read model
+do
+  item=$(basename "$model" .json)
+
+  texture=$(jq -r '.textures.layer0 // .textures.all // .textures.particle // empty' "$model")
+
+  elements=$(jq '.elements // empty' "$model")
+
+  if [[ -n "$elements" ]]; then
+    continue
+  fi
+
+  if [[ ! -f ./target/rp/textures/item_texture.json ]]; then
+    echo '{"resource_pack_name":"geyser_custom","texture_name":"atlas.items","texture_data":{}}' > ./target/rp/textures/item_texture.json
+  fi
+
+  if [[ -n "$texture" ]]
+  then
+    texture=${texture#minecraft:}
+
+    src=$(find assets -type f -path "*/textures/*/${texture##*/}.png" | head -n 1)
+
+    if [[ -f "$src" ]]
+    then
+      cp "$src" "target/rp/textures/items/${item}.png"
+
+      echo "${item},textures/items/${item}" >> scratch_files/icons2d.csv
+
+      status_message completion "Generated icon: ${item}"
+    fi
+  fi
+done
+
+if [[ -f scratch_files/icons2d.csv ]]
+then
+jq -cR 'split(",")' scratch_files/icons2d.csv | jq -s 'map({(.[0]): {"textures": (.[1])}}) | add' > scratch_files/icons2d.json
+
+jq -s '
+.[0] as $icons
+| .[1]
+| .texture_data += $icons
+' scratch_files/icons2d.json ./target/rp/textures/item_texture.json | sponge ./target/rp/textures/item_texture.json
+fi
+
+status_message completion "2D icon generation finished\n"
 
 jq -r '.[] | select(.parent != null) | [.path, .geyserID, .parent, .namespace, .model_path, .model_name, .path_hash] | @tsv | gsub("\\t";",")' config.json | sponge scratch_files/pa.csv
 
@@ -1062,7 +1116,7 @@ then
      consolidate_files './target/rp/models/blocks'
      rm -rf ./target/rp/models/blocks/*/
      consolidate_files './target/rp/attachables'
-     rm -rf rm -rf ./target/rp/attachables/*/
+     rm -rf ./target/rp/attachables/*/
 fi
 
 # attempt to merge with existing pack if input was provided
