@@ -78,8 +78,9 @@ jobs:
           sudo apt-get update
       - name: Install dependencies
         run: |
-          sudo apt-get install -y --fix-missing moreutils zip imagemagick ghostscript
+          sudo apt-get install -y --fix-missing moreutils zip imagemagick ghostscript python3-pip
           yarn global add spritesheet-js
+          pip3 install --quiet --break-system-packages Pillow
       - name: Convert Pack
         id: convert-pack
         continue-on-error: false
@@ -92,9 +93,11 @@ jobs:
           ATTACHABLE_MATERIAL: ${{ needs.get-pack-info.outputs.attachable_material }}
           ARCHIVE_SCRATCH: ${{ needs.get-pack-info.outputs.archive_scratch }}
           RENAME_MODEL_FILES: ${{ needs.get-pack-info.outputs.rename_model_files }}
+          SOUNDS_CONVERSION: "true"
         run: |
           mkdir -p staging
           cp converter.sh staging/
+          cp sound.py staging/
           cd staging
           chmod +x converter.sh
           COLUMNS=$COLUMNS-1 curl --no-styled-output -#L -o input_pack.zip "${PACK_URL}"

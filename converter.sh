@@ -477,6 +477,24 @@ done
 
 status_message completion "Initial pack setup complete\n"
 
+# SOUND CONVERSION
+if [[ ${SOUNDS_CONVERSION} == "true" ]]; then
+  if ls ./assets/*/sounds.json 1>/dev/null 2>&1; then
+    status_message process "Running sound conversion (sound.py)"
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    [ -f "${SCRIPT_DIR}/../sound.py" ] && cp "${SCRIPT_DIR}/../sound.py" . 2>/dev/null || true
+    if [ -f "sound.py" ]; then
+      python3 sound.py \
+        && status_message completion "Sound conversion complete" \
+        || status_message error "Sound conversion failed (check sound.py logs above)"
+    else
+      status_message error "sound.py tidak ditemukan, skip sound conversion"
+    fi
+  else
+    status_message info "Tidak ada sounds.json ditemukan di pack, skip sound conversion"
+  fi
+fi
+
 status_message process "Generating Bedrock 2D icons from Java models\n"
 
 mkdir -p target/rp/textures/items
