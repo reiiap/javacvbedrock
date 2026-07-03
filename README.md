@@ -16,6 +16,10 @@ Script ini akan mengubah:
 - Model 3D Item
 - Model Block
 - Texture Atlas
+- Validasi JSON/YAML best-effort
+- File bahasa Java (`assets/*/lang/*.json` dan `.lang`)
+- `sounds.json` + file OGG
+- Metadata animasi `.png.mcmeta` sebagai `flipbook_textures.json`
 
 Menjadi:
 
@@ -23,6 +27,8 @@ Menjadi:
 - Behavior Pack (untuk preview model)
 - File mapping kompatibel Geyser
 - config.json berisi hash model
+- `conversion_report.json` berisi resource yang ditemukan, aset yang dikonversi,
+  peringatan, error non-fatal, dan durasi proses
 
 Project ini cocok untuk server yang menggunakan:
 - GeyserMC
@@ -102,8 +108,34 @@ Converter akan menghasilkan:
 - Behavior Pack (preview model)  
 - File mapping Geyser  
 - config.json  
+- Conversion report (`target/conversion_report.json`)
+- Bedrock text files (`target/rp/texts/*.lang`) jika pack Java memiliki bahasa
+- Bedrock sound definitions (`target/rp/sounds/sound_definitions.json`) jika pack
+  Java memiliki `sounds.json`
+- Bedrock flipbook metadata (`target/rp/textures/flipbook_textures.json`) untuk
+  tekstur animasi yang memiliki `.png.mcmeta`
 
 Hash model dibuat berdasarkan kombinasi predicate dan MD5 (7 karakter pertama) dan akan tetap konsisten walaupun dilakukan convert ulang.
+
+---
+
+## 🧪 Pipeline Best-Effort
+
+Selain alur utama `converter.sh`, repository ini menjalankan
+`javacv_pipeline.py` sebelum packaging. Pipeline ini tidak mengganti proses
+konversi yang sudah ada; ia menambahkan tahap produksi yang aman dan
+non-fatal:
+
+1. Discover namespace, model, tekstur, animasi, suara, font, bahasa, serta
+   marker plugin ItemsAdder, Nexo, dan Oraxen.
+2. Validasi JSON / `.mcmeta` dan YAML bila PyYAML tersedia.
+3. Konversi language Java ke format `.lang` Bedrock.
+4. Konversi `sounds.json` ke `sound_definitions.json` dan menyalin OGG.
+5. Konversi metadata animasi `.png.mcmeta` ke `flipbook_textures.json`.
+6. Menulis laporan lengkap ke `target/conversion_report.json`.
+
+Jika ada aset hilang, JSON invalid, YAML invalid, atau fitur yang tidak bisa
+dikonversi tepat, pipeline akan mencatat warning dan melanjutkan proses.
 
 ---
 

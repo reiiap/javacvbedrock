@@ -1265,6 +1265,10 @@ if [ -f sprites.json ]; then
   
 fi
 
+status_message process "Running best-effort validation, language, sound, animation, and report pipeline"
+python3 ./javacv_pipeline.py || status_message error "Best-effort finishing pipeline reported an error; continuing with packaging"
+status_message completion "Best-effort finishing pipeline complete"
+
 # cleanup
 rm -rf assets && rm -f pack.mcmeta && rm -f pack.png
 if [[ ${save_scratch} != "true" ]] 
