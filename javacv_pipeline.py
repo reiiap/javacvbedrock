@@ -10,13 +10,15 @@ an auditable conversion report.
 from __future__ import annotations
 
 import json
-import os
 import re
 import shutil
 import time
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
+
+from java_model_engine import JavaModelEngine, iter_model_files, stable_icon_name
 
 try:
     import yaml  # type: ignore
@@ -43,6 +45,13 @@ class Report:
         "sounds_json": 0,
         "language_files": 0,
         "font_files": 0,
+        "particles": 0,
+        "animations": 0,
+        "animation_controllers": 0,
+        "atlas_files": 0,
+        "folder_inputs": 0,
+        "zip_inputs": 0,
+        "duplicates": [],
     })
     converted: dict[str, int] = field(default_factory=lambda: {
         "languages": 0,
@@ -50,7 +59,12 @@ class Report:
         "sound_definitions": 0,
         "flipbook_textures": 0,
         "copied_plugin_assets": 0,
+        "baked_models": 0,
+        "rendered_icons": 0,
+        "cached_icons": 0,
     })
+    skipped: list[str] = field(default_factory=list)
+    unsupported: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
@@ -69,6 +83,8 @@ class Report:
             "elapsed_seconds": round(time.time() - self.started_at, 3),
             "discovered": self.discovered,
             "converted": self.converted,
+            "skipped": self.skipped,
+            "unsupported": self.unsupported,
             "warnings": self.warnings,
             "errors": self.errors,
         }
@@ -107,15 +123,35 @@ def discover(report: Report) -> None:
     report.discovered["sounds_json"] = len(list(ASSETS.glob("*/sounds.json")))
     report.discovered["language_files"] = len(list(ASSETS.glob("*/lang/*.json"))) + len(list(ASSETS.glob("*/lang/*.lang")))
     report.discovered["font_files"] = len(list(ASSETS.glob("*/font/*.json")))
+    report.discovered["particles"] = len(list(ASSETS.glob("*/particles/**/*.json")))
+    report.discovered["animations"] = len(list(ASSETS.glob("*/animations/**/*.json")))
+    report.discovered["animation_controllers"] = len(list(ASSETS.glob("*/animation_controllers/**/*.json")))
+    report.discovered["atlas_files"] = len(list(ASSETS.glob("*/atlases/**/*.json"))) + len(list(ASSETS.glob("*/textures/atlas*.json")))
+    report.discovered["folder_inputs"] = 1 if (JAVA_PACK / "pack.mcmeta").exists() or ASSETS.exists() else 0
+    report.discovered["zip_inputs"] = len([p for p in JAVA_PACK.glob("*.zip") if zipfile.is_zipfile(p)])
+    duplicate_map: dict[str, list[str]] = {}
+    for path in iter_files(ASSETS, (".png", ".json", ".ogg", ".mcmeta")):
+        try:
+            rel_parts = path.relative_to(ASSETS).parts
+            if len(rel_parts) > 1:
+                key = "/".join(rel_parts[1:])
+                duplicate_map.setdefault(key, []).append(path.as_posix())
+        except Exception:
+            continue
+    duplicates = {key: paths for key, paths in duplicate_map.items() if len(paths) > 1}
+    report.discovered["duplicates"] = duplicates
+    for key, paths in duplicates.items():
+        report.warn(f"Duplicate resource path across namespaces: {key} -> {paths}")
 
     markers = {
-        "ItemsAdder": ["itemsadder", "ItemsAdder"],
-        "Nexo": ["nexo", "Nexo"],
-        "Oraxen": ["oraxen", "Oraxen"],
+        "ItemsAdder": ["contents", "configs", "resourcepack", "itemsadder", "ItemsAdder"],
+        "Nexo": ["items.yml", "glyphs.yml", "fonts.yml", "nexo", "Nexo"],
+        "Oraxen": ["oraxen", "Oraxen", "glyphs.yml", "items.yml"],
     }
     plugins = []
+    all_paths = list(JAVA_PACK.rglob("*"))
     for name, needles in markers.items():
-        if any(any(needle in part for part in p.parts) for needle in needles for p in JAVA_PACK.rglob("*")):
+        if any(any(needle.lower() == part.lower() or needle.lower() in part.lower() for part in p.parts) for needle in needles for p in all_paths):
             plugins.append(name)
     report.discovered["plugins"] = sorted(set(plugins))
 
@@ -133,6 +169,19 @@ def validate(report: Report) -> None:
             yaml.safe_load(path.read_text(encoding="utf-8"))
         except Exception as exc:
             report.warn(f"Invalid YAML in {path}: {exc}")
+    print("[PIPELINE] Validating model parent and texture references")
+    engine = JavaModelEngine(ASSETS, report.warn)
+    for path in iter_model_files(ASSETS):
+        baked = engine.bake(path)
+        if baked is None:
+            report.skipped.append(f"model:{path.as_posix()}")
+            continue
+        for texture_ref in baked.textures.values():
+            resolved = engine.resolve_texture_name(texture_ref, baked.textures)
+            if resolved and engine.texture_path(resolved) is None:
+                report.warn(f"Missing texture '{resolved}' referenced by {path}")
+        for warning in baked.warnings:
+            report.warn(warning)
 
 
 def convert_languages(report: Report) -> None:
@@ -230,6 +279,50 @@ def convert_flipbooks(report: Report) -> None:
         report.converted["flipbook_textures"] = len(flipbook)
 
 
+def bake_and_render_models(report: Report) -> None:
+    print("[PIPELINE] Baking models and rendering missing inventory icons")
+    engine = JavaModelEngine(ASSETS, report.warn)
+    ir_dir = Path("target/model_ir")
+    icon_dir = TARGET_RP / "textures" / "items" / "generated"
+    item_texture_path = TARGET_RP / "textures" / "item_texture.json"
+    ir_dir.mkdir(parents=True, exist_ok=True)
+    icon_dir.mkdir(parents=True, exist_ok=True)
+    if item_texture_path.exists():
+        try:
+            item_texture = json.loads(item_texture_path.read_text(encoding="utf-8"))
+        except Exception:
+            item_texture = {"resource_pack_name": "geyser_custom", "texture_name": "atlas.items", "texture_data": {}}
+    else:
+        item_texture = {"resource_pack_name": "geyser_custom", "texture_name": "atlas.items", "texture_data": {}}
+    item_texture.setdefault("texture_data", {})
+
+    for path in iter_model_files(ASSETS):
+        baked = engine.bake(path)
+        if baked is None:
+            report.skipped.append(f"model:{path.as_posix()}")
+            continue
+        safe_id = stable_icon_name(baked.model_id)
+        (ir_dir / f"{safe_id}.json").write_text(json.dumps(baked.to_ir(), indent=2), encoding="utf-8")
+        report.converted["baked_models"] += 1
+
+        has_existing_icon = safe_id in item_texture["texture_data"]
+        icon_path = icon_dir / f"{safe_id}.png"
+        if has_existing_icon or icon_path.exists():
+            report.converted["cached_icons"] += 1
+            continue
+        if engine.render_icon(baked, icon_path):
+            item_texture["texture_data"][safe_id] = {"textures": f"textures/items/generated/{safe_id}"}
+            report.converted["rendered_icons"] += 1
+        else:
+            report.unsupported.append(f"render_icon:{baked.model_id}")
+            report.warn(f"Could not render inventory icon for {baked.model_id}; keeping existing converter output")
+        for warning in baked.warnings:
+            report.warn(warning)
+
+    item_texture_path.parent.mkdir(parents=True, exist_ok=True)
+    item_texture_path.write_text(json.dumps(item_texture, indent=2), encoding="utf-8")
+
+
 def main() -> int:
     report = Report()
     try:
@@ -238,6 +331,7 @@ def main() -> int:
         convert_languages(report)
         convert_sounds(report)
         convert_flipbooks(report)
+        bake_and_render_models(report)
     except Exception as exc:
         report.error(f"Unexpected non-fatal pipeline error: {exc}")
     finally:

@@ -17,6 +17,10 @@ Script ini akan mengubah:
 - Model Block
 - Texture Atlas
 - Validasi JSON/YAML best-effort
+- Java model parser untuk parent chain, texture variable, element, display, dan
+  override metadata
+- Baking model ke intermediate representation (`target/model_ir/*.json`)
+- Rendering inventory icon otomatis untuk model yang bisa dipanggang
 - File bahasa Java (`assets/*/lang/*.json` dan `.lang`)
 - `sounds.json` + file OGG
 - Metadata animasi `.png.mcmeta` sebagai `flipbook_textures.json`
@@ -114,6 +118,8 @@ Converter akan menghasilkan:
   Java memiliki `sounds.json`
 - Bedrock flipbook metadata (`target/rp/textures/flipbook_textures.json`) untuk
   tekstur animasi yang memiliki `.png.mcmeta`
+- Baked model IR (`target/model_ir/*.json`) dan icon hasil render
+  (`target/rp/textures/items/generated/*.png`) untuk model Java yang valid
 
 Hash model dibuat berdasarkan kombinasi predicate dan MD5 (7 karakter pertama) dan akan tetap konsisten walaupun dilakukan convert ulang.
 
@@ -129,10 +135,15 @@ non-fatal:
 1. Discover namespace, model, tekstur, animasi, suara, font, bahasa, serta
    marker plugin ItemsAdder, Nexo, dan Oraxen.
 2. Validasi JSON / `.mcmeta` dan YAML bila PyYAML tersedia.
-3. Konversi language Java ke format `.lang` Bedrock.
-4. Konversi `sounds.json` ke `sound_definitions.json` dan menyalin OGG.
-5. Konversi metadata animasi `.png.mcmeta` ke `flipbook_textures.json`.
-6. Menulis laporan lengkap ke `target/conversion_report.json`.
+3. Resolve parent model Java, texture variable, element, display transform,
+   override, Custom Model Data metadata, dan baked mesh IR.
+4. Render icon inventory otomatis dari model generated/layered dan model
+   element-based. Jika Pillow tidak tersedia, pipeline tetap melanjutkan dengan
+   fallback aman dan warning.
+5. Konversi language Java ke format `.lang` Bedrock.
+6. Konversi `sounds.json` ke `sound_definitions.json` dan menyalin OGG.
+7. Konversi metadata animasi `.png.mcmeta` ke `flipbook_textures.json`.
+8. Menulis laporan lengkap ke `target/conversion_report.json`.
 
 Jika ada aset hilang, JSON invalid, YAML invalid, atau fitur yang tidak bisa
 dikonversi tepat, pipeline akan mencatat warning dan melanjutkan proses.
